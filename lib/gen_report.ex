@@ -37,9 +37,7 @@ defmodule GenReport do
     2020
   ]
 
-  def build() do
-    {:error, "Insira o nome de um arquivo"}
-  end
+  def build(), do: {:error, "Insira o nome de um arquivo"}
 
   def build(filename) do
     result =
@@ -63,12 +61,12 @@ defmodule GenReport do
 
   defp report_acc() do
     all_hours = Enum.into(@names, %{}, &{&1, 0})
-    hours_per_month = Enum.into(@names, %{}, &build_map(&1, @months))
-    hours_per_year = Enum.into(@names, %{}, &build_map(&1, @years))
+    hours_per_month = Enum.into(@names, %{}, &build_submap(&1, @months))
+    hours_per_year = Enum.into(@names, %{}, &build_submap(&1, @years))
     build_report(all_hours, hours_per_month, hours_per_year)
   end
 
-  defp build_map(key, values) do
+  defp build_submap(key, values) do
     {key, Enum.into(values, %{}, &{&1, 0})}
   end
 
