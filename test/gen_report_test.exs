@@ -19,4 +19,28 @@ defmodule GenReportTest do
       assert response == {:error, "Insira o nome de um arquivo"}
     end
   end
+
+  describe "build_from_many/1" do
+    test "when a file list is provided, builds the report" do
+      filenames = ["part_1.csv", "part_2.csv", "part_3.csv"]
+
+      result =
+        filenames
+        |> GenReport.build_from_many()
+
+      expected_result = ReportFixture.build()
+      assert result == expected_result
+    end
+
+    test "when a file list is not provided, returns an error" do
+      filenames = "banana"
+
+      result =
+        filenames
+        |> GenReport.build_from_many()
+
+      expected_result = {:error, "the argument must be a list of strings"}
+      assert result == expected_result
+    end
+  end
 end

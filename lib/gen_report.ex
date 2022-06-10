@@ -48,6 +48,20 @@ defmodule GenReport do
     {:ok, result}
   end
 
+  def build_from_many(filenames) when not is_list(filenames),
+    do: {:error, "the argument must be a list of strings"}
+
+  def build_from_many(filenames) do
+    result =
+      filenames
+      |> Task.async_stream(&build/1)
+      |> Enum.reduce(report_acc(), fn {:ok, {:ok, result}}, report ->
+        sum_reports(report, result)
+      end)
+
+    {:ok, result}
+  end
+
   defp sum_values([name, hours, _day, month, year], %{
          "all_hours" => all_hours,
          "hours_per_month" => hours_per_month,
@@ -61,13 +75,41 @@ defmodule GenReport do
 
   defp report_acc() do
     all_hours = Enum.into(@names, %{}, &{&1, 0})
-    hours_per_month = Enum.into(@names, %{}, &build_submap(&1, @months))
-    hours_per_year = Enum.into(@names, %{}, &build_submap(&1, @years))
+    hours_per_month = Enum.into(@names, %{}, &build_nasted_map(&1, @months))
+    hours_per_year = Enum.into(@names, %{}, &build_nasted_map(&1, @years))
     build_report(all_hours, hours_per_month, hours_per_year)
   end
 
-  defp build_submap(key, values) do
+  defp build_nasted_map(key, values) do
     {key, Enum.into(values, %{}, &{&1, 0})}
+  end
+
+  defp sum_reports(
+         %{
+           "all_hours" => all_hours1,
+           "hours_per_month" => hours_per_month1,
+           "hours_per_year" => hours_per_year1
+         },
+         %{
+           "all_hours" => all_hours2,
+           "hours_per_month" => hours_per_month2,
+           "hours_per_year" => hours_per_year2
+         }
+       ) do
+    all_hours = merge_maps(all_hours1, all_hours2)
+    hours_per_month = merge_nasted_maps(hours_per_month1, hours_per_month2)
+    hours_per_year = merge_nasted_maps(hours_per_year1, hours_per_year2)
+    build_report(all_hours, hours_per_month, hours_per_year)
+  end
+
+  defp merge_maps(map1, map2) do
+    Map.merge(map1, map2, fn _key, value1, value2 -> value1 + value2 end)
+  end
+
+  defp merge_nasted_maps(map1, map2) do
+    Map.merge(map1, map2, fn _key1, map1, map2 ->
+      Map.merge(map1, map2, fn _key2, value1, value2 -> value1 + value2 end)
+    end)
   end
 
   defp build_report(all_hours, hours_per_month, hours_per_year) do
